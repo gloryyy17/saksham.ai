@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary-green: 6 95 70;      /* #065F46 Forest/Emerald Green */
+    --accent-yellow: 217 119 6;    /* #D97706 Warm Amber Gold */
+    --bg-page: 248 250 249;        /* #F8FAF9 Soft Warm Light */
+    --surface-white: 255 255 255;  /* #FFFFFF Pure Card White */
+  }
+
+  body {
+    @apply bg-surface-light text-slate-900 min-h-screen font-sans antialiased selection:bg-brand-100 selection:text-brand-900;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Low Power Mode Styles */
+body.low-power-mode * {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Custom scrollbars for rural low-power devices */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F4F7F4;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #A7F3D0;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #047857;
+}
+
+/* Elegant Cards & Components */
+.saksham-card {
+  @apply bg-white rounded-2xl border border-slate-200/90 shadow-card hover:border-brand-300/80 transition-all duration-200;
+}
+
+.saksham-gradient-header {
+  background: linear-gradient(135deg, #064E3B 0%, #047857 60%, #0D9488 100%);
+}
+
+.saksham-badge {
+  @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
+}
+
+/* Pulse animation for voice listening (Warm Yellow/Gold) */
+@keyframes mic-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.45);
+  }
+  70% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 20px rgba(217, 119, 6, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0);
+  }
+}
+
+.animate-mic {
+  animation: mic-pulse 1.8s infinite;
+}
+
+/* Print specific styles for certificates */
+@media print {
+  body {
+    background: white !important;
+  }
+  header, sidebar, nav, button {
+    display: none !important;
+  }
+  #certificate-print-area {
+    border-width: 4px !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+}
