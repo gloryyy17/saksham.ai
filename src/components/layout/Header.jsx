@@ -14,10 +14,10 @@ export default function Header() {
   const navigate = useNavigate();
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+    <header className="sticky top-0 z-40 bg-surface-page/95 backdrop-blur-md border-b border-slate-200/70 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
-          
+
           {/* Logo & Brand */}
           <Link to="/" className="flex items-center gap-2.5 group shrink-0">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-800 to-teal-600 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
@@ -42,7 +42,7 @@ export default function Header() {
 
           {/* Center / Right controls */}
           <div className="flex items-center gap-2 sm:gap-4">
-            
+
             {/* Low Bandwidth badge if active */}
             {lowBandwidthMode && (
               <span className="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-1 rounded-lg">

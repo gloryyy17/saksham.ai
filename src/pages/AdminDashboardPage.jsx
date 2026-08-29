@@ -30,9 +30,9 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-8 pb-12">
-      
+
       {/* Header Banner */}
-      <div className="saksham-card p-6 sm:p-8 bg-gradient-to-r from-slate-900 via-brand-900 to-slate-900 text-white rounded-3xl shadow-card">
+      <div className="saksham-card p-6 sm:p-8 saksham-gradient-header text-brand-950 rounded-3xl shadow-card">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -59,9 +59,8 @@ export default function AdminDashboardPage() {
                 <button
                   key={cls}
                   onClick={() => setSelectedClass(cls)}
-                  className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
-                    selectedClass === cls ? 'bg-white text-slate-900' : 'text-slate-300 hover:text-white'
-                  }`}
+                  className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${selectedClass === cls ? 'bg-white text-slate-900' : 'text-slate-300 hover:text-white'
+                    }`}
                 >
                   {cls}
                 </button>

@@ -33,9 +33,9 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-200 min-h-[calc(100vh-4rem)] p-4 shrink-0 justify-between">
+    <aside className="hidden lg:flex flex-col w-64 bg-surface-page border-r border-slate-200/60 min-h-[calc(100vh-4rem)] p-4 shrink-0 justify-between">
       <div className="space-y-6">
-        
+
         {/* Student Class Badge Banner */}
         {profile && (
           <div className="p-3 bg-brand-50/80 rounded-2xl border border-brand-100 flex items-center gap-3">
@@ -60,10 +60,9 @@ export default function Sidebar() {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
-                    isActive
-                      ? 'bg-brand-800 text-white shadow-sm font-bold'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${isActive
+                    ? 'bg-brand-800 text-white shadow-sm font-bold'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                   }`
                 }
               >
@@ -92,10 +91,9 @@ export default function Sidebar() {
         <NavLink
           to="/admin"
           className={({ isActive }) =>
-            `flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
-              isActive
-                ? 'bg-slate-900 text-white'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+            `flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${isActive
+              ? 'bg-slate-900 text-white'
+              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
             }`
           }
         >

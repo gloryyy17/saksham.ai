@@ -51,7 +51,7 @@ export default function OfflineTestPage() {
         localQuizAttempts: qCount,
         syncQueue: sCount
       });
-    } catch (e) {}
+    } catch (e) { }
   };
 
   useEffect(() => {
@@ -68,35 +68,36 @@ export default function OfflineTestPage() {
       await refreshTelemetry();
       try {
         confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-      } catch (e) {}
+      } catch (e) { }
     }
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
-      
+
       {/* Header */}
-      <div className="saksham-card p-6 sm:p-8 bg-gradient-to-r from-slate-900 via-brand-950 to-teal-950 text-white rounded-3xl shadow-card">
+      <div className="saksham-card p-6 sm:p-8 saksham-gradient-header text-brand-950 rounded-3xl shadow-card">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-extrabold uppercase tracking-wider bg-accent-500 text-white px-2.5 py-0.5 rounded-full">
                 Hackathon Lab
               </span>
-              <span className="text-xs text-slate-300">
+              <span className="text-xs text-brand-900/80">
                 PWA + Dexie.js + IndexedDB + REST Sync Engine
               </span>
+              <h1 className="text-2xl sm:text-3xl font-black">
+                Offline-First Test Laboratory
+              </h1>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black">
-              Offline-First Test Laboratory
-            </h1>
-            <p className="text-xs text-slate-300 max-w-xl">
+
+            <p className="text-xs text-brand-900/80 max-w-xl">
               Simulate disconnected rural network environments, verify IndexedDB persistence, and test automatic cloud synchronization.
             </p>
           </div>
 
-          <div className="p-3 bg-white/10 rounded-2xl text-center border border-white/20">
-            <span className="text-[10px] text-slate-300 uppercase block font-bold">Network State</span>
+          <div className="p-3 bg-white/40 rounded-2xl text-center border border-white/50">
+            <span className="text-[10px] text-brand-900/70 uppercase block font-bold">Network State</span>
             <span className={`text-sm font-black ${isOnline ? 'text-emerald-400' : 'text-amber-400'}`}>
               {isOnline ? 'ONLINE' : 'OFFLINE'}
             </span>
@@ -123,11 +124,10 @@ export default function OfflineTestPage() {
 
           <button
             onClick={() => toggleSimulatedOffline()}
-            className={`px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all shadow-sm flex items-center gap-2 cursor-pointer shrink-0 ${
-              isSimulatedOffline
-                ? 'bg-amber-500 text-white hover:bg-amber-600'
-                : 'bg-emerald-600 text-white hover:bg-emerald-700'
-            }`}
+            className={`px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all shadow-sm flex items-center gap-2 cursor-pointer shrink-0 ${isSimulatedOffline
+              ? 'bg-amber-500 text-white hover:bg-amber-600'
+              : 'bg-emerald-600 text-white hover:bg-emerald-700'
+              }`}
           >
             {isSimulatedOffline ? <WifiOff className="w-4 h-4" /> : <Wifi className="w-4 h-4" />}
             <span>{isSimulatedOffline ? 'Switch to ONLINE' : 'Simulate OFFLINE'}</span>
@@ -143,7 +143,7 @@ export default function OfflineTestPage() {
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          
+
           {/* Step A */}
           <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
             <span className="text-[10px] font-extrabold text-brand-800 uppercase">Step A (Online)</span>

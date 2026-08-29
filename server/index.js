@@ -74,7 +74,7 @@ app.post('/api/sync', (req, res) => {
   const results = [];
   for (const ev of events) {
     const { eventId, userId, actionType, payload, createdAt } = ev;
-    
+
     // Deduplication check: if eventId was already processed, don't duplicate
     if (processedSyncEvents.has(eventId)) {
       results.push({ eventId, status: 'already_synced' });
@@ -98,6 +98,13 @@ app.post('/api/sync', (req, res) => {
     success: true,
     processedCount: results.length,
     results
+  });
+});
+app.get('/api/progress/:userId', (req, res) => {
+  const { userId } = req.params;
+  res.json({
+    progress: serverSyncDatabase.progress.filter(p => p.userId === userId),
+    quizAttempts: serverSyncDatabase.quizAttempts.filter(q => q.userId === userId)
   });
 });
 

@@ -39,7 +39,7 @@ function AppLayout({ children }) {
   const isAuth = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/onboarding';
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface-light text-slate-900">
+    <div className="min-h-screen flex flex-col bg-surface-page text-slate-900">
       <Header />
       <OfflineBanner />
 
