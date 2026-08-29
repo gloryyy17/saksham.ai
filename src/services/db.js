@@ -3,7 +3,7 @@ import Dexie from 'dexie';
 export class SakshamDB extends Dexie {
   constructor() {
     super('SakshamDatabase');
-    
+
     this.version(1).stores({
       downloadedChapters: 'id, classId, subjectId, chapterNumber, downloadedAt',
       localProgress: '++id, [userId+lessonId], userId, lessonId, chapterId, completed, syncStatus',
@@ -11,7 +11,8 @@ export class SakshamDB extends Dexie {
       localProjectSubmissions: '++id, [userId+projectId], userId, projectId, status, syncStatus',
       syncQueue: 'eventId, actionType, status, createdAt',
       cachedCurriculum: 'id, type, classId, subjectId',
-      userSettings: 'key'
+      userSettings: 'key',
+      supportTickets: '++id, userId, status, createdAt, syncStatus'
     });
   }
 }

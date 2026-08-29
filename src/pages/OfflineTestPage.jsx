@@ -14,9 +14,20 @@ import {
   Database,
   ArrowRight,
   Sparkles,
-  Download
+  Download,
+  AlertTriangle,
+  ShieldAlert,
+  LifeBuoy
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import {
+  simulateBlackout,
+  simulateTamper,
+  detectCorruption,
+  recoverFromCloud,
+  getUnrecoverableCount
+} from '../services/blackoutService';
+import { raiseTicket } from '../services/ticketService';
 
 export default function OfflineTestPage() {
   const { language, t } = useLanguage();
@@ -38,6 +49,11 @@ export default function OfflineTestPage() {
     localQuizAttempts: 0,
     syncQueue: 0
   });
+
+  // Blackout Drill state
+  const [integrityResult, setIntegrityResult] = useState(null);
+  const [unrecoverable, setUnrecoverable] = useState(0);
+  const [ticketRaised, setTicketRaised] = useState(false);
 
   const refreshTelemetry = async () => {
     try {
@@ -72,6 +88,45 @@ export default function OfflineTestPage() {
     }
   };
 
+  // Blackout Drill handlers
+  const handleSimulateBlackout = async () => {
+    await simulateBlackout();
+    const result = await detectCorruption();
+    setIntegrityResult(result);
+    setTicketRaised(false);
+    await refreshTelemetry();
+  };
+
+  const handleSimulateTamper = async () => {
+    await simulateTamper();
+    const result = await detectCorruption();
+    setIntegrityResult(result);
+    setTicketRaised(false);
+    await refreshTelemetry();
+  };
+
+  const handleCheckIntegrity = async () => {
+    const result = await detectCorruption();
+    setIntegrityResult(result);
+  };
+
+  const handleRecover = async () => {
+    await recoverFromCloud('guest_user');
+    const count = await getUnrecoverableCount();
+    setUnrecoverable(count);
+    setIntegrityResult(await detectCorruption());
+    await refreshTelemetry();
+  };
+
+  const handleRaiseTicket = async () => {
+    await raiseTicket({
+      subject: 'Data recovery issue',
+      description: `Detected mode: ${integrityResult?.mode || 'unknown'}. ${unrecoverable} item(s) could not be recovered.`,
+      context: { mode: integrityResult?.mode, unrecoverable }
+    });
+    setTicketRaised(true);
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
 
@@ -86,11 +141,10 @@ export default function OfflineTestPage() {
               <span className="text-xs text-brand-900/80">
                 PWA + Dexie.js + IndexedDB + REST Sync Engine
               </span>
-              <h1 className="text-2xl sm:text-3xl font-black">
-                Offline-First Test Laboratory
-              </h1>
             </div>
-
+            <h1 className="text-2xl sm:text-3xl font-black">
+              Offline-First Test Laboratory
+            </h1>
             <p className="text-xs text-brand-900/80 max-w-xl">
               Simulate disconnected rural network environments, verify IndexedDB persistence, and test automatic cloud synchronization.
             </p>
@@ -98,7 +152,7 @@ export default function OfflineTestPage() {
 
           <div className="p-3 bg-white/40 rounded-2xl text-center border border-white/50">
             <span className="text-[10px] text-brand-900/70 uppercase block font-bold">Network State</span>
-            <span className={`text-sm font-black ${isOnline ? 'text-emerald-400' : 'text-amber-400'}`}>
+            <span className={`text-sm font-black ${isOnline ? 'text-emerald-700' : 'text-amber-700'}`}>
               {isOnline ? 'ONLINE' : 'OFFLINE'}
             </span>
           </div>
@@ -125,8 +179,8 @@ export default function OfflineTestPage() {
           <button
             onClick={() => toggleSimulatedOffline()}
             className={`px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all shadow-sm flex items-center gap-2 cursor-pointer shrink-0 ${isSimulatedOffline
-              ? 'bg-amber-500 text-white hover:bg-amber-600'
-              : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                ? 'bg-amber-500 text-white hover:bg-amber-600'
+                : 'bg-emerald-600 text-white hover:bg-emerald-700'
               }`}
           >
             {isSimulatedOffline ? <WifiOff className="w-4 h-4" /> : <Wifi className="w-4 h-4" />}
@@ -245,6 +299,87 @@ export default function OfflineTestPage() {
             <span className="text-xl font-black text-slate-900">{dexieTables.syncQueue}</span>
           </div>
         </div>
+      </div>
+
+      {/* 4. Blackout Drill */}
+      <div className="saksham-card p-6 space-y-5">
+        <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+          <ShieldAlert className="w-5 h-5 text-red-600" />
+          4. Blackout Drill — Corruption & Recovery
+        </h2>
+        <p className="text-[11px] text-slate-500 -mt-3">
+          Simulate a real data-loss event live, watch integrity detection fire, then recover from the server's independent copy.
+        </p>
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleSimulateBlackout}
+            className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span>Simulate Blackout</span>
+          </button>
+
+          <button
+            onClick={handleSimulateTamper}
+            className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span>Simulate Tampering</span>
+          </button>
+
+          <button
+            onClick={handleCheckIntegrity}
+            className="px-3.5 py-1.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span>Check Integrity</span>
+          </button>
+
+          <button
+            onClick={handleRecover}
+            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Recover from Cloud</span>
+          </button>
+
+          {(integrityResult?.corrupted || unrecoverable > 0) && (
+            <button
+              onClick={handleRaiseTicket}
+              className="px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer"
+            >
+              <LifeBuoy className="w-3.5 h-3.5" />
+              <span>Raise a Ticket</span>
+            </button>
+          )}
+        </div>
+
+        {integrityResult && (
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1">
+            <p className="font-bold text-slate-900">
+              Status:{' '}
+              <span className={integrityResult.corrupted ? 'text-red-600' : 'text-emerald-700'}>
+                {integrityResult.corrupted ? `⚠ ${integrityResult.mode}` : '✓ clean'}
+              </span>
+            </p>
+            {integrityResult.live && (
+              <p className="text-slate-500">
+                Live counts — progress: {integrityResult.live.progressCount}, quizzes: {integrityResult.live.quizCount}
+              </p>
+            )}
+            <p className="text-slate-500">
+              Unrecoverable pending items: <span className="font-bold text-slate-900">{unrecoverable}</span>
+            </p>
+          </div>
+        )}
+
+        {ticketRaised && (
+          <p className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Ticket raised — support has been notified.
+          </p>
+        )}
       </div>
 
     </div>

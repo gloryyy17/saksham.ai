@@ -70,6 +70,16 @@ app.post('/api/sync', (req, res) => {
   if (!events || !Array.isArray(events)) {
     return res.status(400).json({ error: 'Invalid sync payload. Array of events required.' });
   }
+  const serverTickets = [];
+
+  app.post('/api/tickets', (req, res) => {
+    serverTickets.push(req.body);
+    res.json({ success: true });
+  });
+
+  app.get('/api/tickets/:userId', (req, res) => {
+    res.json(serverTickets.filter(t => t.userId === req.params.userId));
+  });
 
   const results = [];
   for (const ev of events) {

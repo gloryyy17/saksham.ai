@@ -49,3 +49,28 @@ export async function detectCorruption() {
         live: { progressCount: progress.length, quizCount: quizzes.length }
     };
 }
+export async function simulateBlackout() {
+    await db.localProgress.clear();
+    await db.localQuizAttempts.clear();
+}
+
+export async function simulateTamper() {
+    const first = await db.localQuizAttempts.toCollection().first();
+    if (first) {
+        await db.localQuizAttempts.update(first.id, { score: 9999, passed: true });
+    }
+}
+
+export async function recoverFromCloud(userId) {
+    const res = await fetch(`/api/progress/${userId}`);
+    if (!res.ok) throw new Error('Cloud unreachable — recovery deferred');
+    const cloud = await res.json();
+    for (const r of cloud.progress) await db.localProgress.put({ ...r, syncStatus: 'synced', recovered: true });
+    for (const r of cloud.quizAttempts) await db.localQuizAttempts.put({ ...r, syncStatus: 'synced', recovered: true });
+    await writeCheckpoint();
+    return cloud;
+}
+
+export async function getUnrecoverableCount() {
+    return db.syncQueue.where('status').equals('pending').count();
+}
