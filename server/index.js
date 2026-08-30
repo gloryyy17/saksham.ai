@@ -119,53 +119,98 @@ app.get('/api/progress/:userId', (req, res) => {
 });
 
 // -------------------------------------------------------------
-// AI TUTOR WITH RAG CURRICULUM RETRIEVAL
+// AI TUTOR WITH GOOGLE GEMINI API & RAG CURRICULUM RETRIEVAL
 // -------------------------------------------------------------
-app.post('/api/ai/tutor', (req, res) => {
+app.post('/api/ai/tutor', async (req, res) => {
   const { question, studentClass = 8, language = 'mr', subject = 'general' } = req.body;
 
   if (!question || question.trim() === '') {
     return res.status(400).json({ error: 'Question is required' });
   }
 
-  const qLower = question.toLowerCase();
-
-  // Knowledge base retrieval based on question keywords
+  const apiKey = process.env.GEMINI_API_KEY || process.env.AI_API_KEY;
   let responseText = '';
+  let provider = 'local';
 
-  if (language === 'mr') {
-    // Pure Marathi AI response
-    if (qLower.includes('गुरुत्वाकर्षण') || qLower.includes('gravity') || qLower.includes('gravitation')) {
-      responseText = `**सक्षम एआय शिक्षक (इयत्ता ${studentClass} वी विज्ञान):**\n\nगुरुत्वाकर्षण म्हणजे विश्वातील कोणत्याही दोन वस्तूंमध्ये असणारे नैसर्गिक आकर्षण बल होय.\n\n१. **न्यूटनचा सिद्धांत:** विश्वातील प्रत्येक वस्तू इतर प्रत्येक वस्तूला एका निश्चित बलाने आकर्षित करते. हे बल वस्तूंच्या वस्तुमानाच्या गुणाकाराशी समानुपाती आणि त्यांच्यातील अंतराच्या वर्गाशी व्यस्त प्रमाणात असते (F = G·m₁·m₂ / r²).\n२. **पृथ्वीवरील गुरुत्वीय त्वरण (g):** पृथ्वीच्या पृष्ठभागावर 'g' चे मूल्य अंदाजे ९.८ m/s² असते.\n३. **दैनिक उदाहरण:** झाडावरून पडणारे सफरचंद थेट जमिनीच्या दिशेने आकर्षित होते, कारण पृथ्वी त्यावर गुरुत्वाकर्षण बल प्रयुक्त करते.`;
-    } else if (qLower.includes('दाब') || qLower.includes('बल') || qLower.includes('pressure') || qLower.includes('force')) {
-      responseText = `**सक्षम एआय शिक्षक (इयत्ता ${studentClass} वी विज्ञान):**\n\n**बल आणि दाब संकल्पना:**\n\n१. **दाबाची व्याख्या:** एकाक क्षेत्रफळावर लंब दिशेने प्रयुक्त होणाऱ्या बलाला 'दाब' (Pressure) म्हणतात.\n२. **मुख्य सूत्र:** दाब = बल ÷ क्षेत्रफळ (P = F / A)\n३. **एकक:** दाबाचे एस.आय. एकक **पास्कल (N/m²)** हे आहे.\n४. **उदाहरण:** सुईचे टोक अत्यंत टोकदार (कमी क्षेत्रफळ) असल्यामुळे थोड्या बलानेही जास्त दाब निर्माण होतो आणि सुई कपड्यात सहज शिरते.`;
-    } else if (qLower.includes('परिमेय') || qLower.includes('rational') || qLower.includes('संख्या')) {
-      responseText = `**सक्षम एआय शिक्षक (इयत्ता ${studentClass} वी गणित):**\n\n**परिमेय संख्यांची संकल्पना:**\n\n१. ज्या संख्या p/q या रूपात लिहिता येतात, त्यांना परिमेय संख्या म्हणतात (येथे p आणि q पूर्णांक असतात व q ≠ ०).\n२. उदाहरणे: ३/५, -७/२, ०, ४.\n३. संख्यारेषेवर परिमेय संख्या दाखवताना छेदाच्या संख्येइतके समान भाग प्रत्येक एककात केले जातात.`;
-    } else {
-      responseText = `**सक्षम एआय शिक्षक (इयत्ता ${studentClass} वी):**\n\nतुमच्या प्रश्नाचा अभ्यास केला असता, महाराष्ट्र राज्य मंडळाच्या इयत्ता ${studentClass} वी च्या अभ्यासक्रमानुसार:\n\n• या संकल्पनेचा मूळ पाया तुमच्या पाठ्यपुस्तकातील मुख्य नियमांवर आधारित आहे.\n• अभ्यास करताना प्रथम संकल्पनेची व्याख्या समजून घ्या आणि त्यानंतर पायरीनुसार उदाहरणे सोडवा.\n• तुम्हाला या घटकातील सराव प्रश्न सोडवायचे असल्यास सांगा, आपण मिळून सोडवूया!`;
+  if (apiKey && apiKey.trim() !== '' && !apiKey.includes('your-')) {
+    try {
+      const langName = language === 'mr' ? 'Marathi (मराठी)' : language === 'hi' ? 'Hindi (हिंदी)' : 'English';
+      const systemInstruction = 
+        `You are "Saksham AI Tutor" (सक्षम एआई शिक्षक), a friendly, highly knowledgeable educational tutor dedicated to Maharashtra State Board students from Class 6 to 10.\n` +
+        `Current Student: Class ${studentClass} (Maharashtra State Board curriculum).\n` +
+        `Output Language: You MUST answer STRICTLY in ${langName}.\n` +
+        `Subject Area: ${subject || 'General STEM & Languages'}.\n\n` +
+        `Pedagogical Rules:\n` +
+        `1. Explain concepts simply and accurately according to Maharashtra State Board textbooks (Balbharati / MSBSHSE syllabus).\n` +
+        `2. Structure answers with: Short Definition -> Core Principles/Formulas -> Practical Everyday Example -> Summary Tip.\n` +
+        `3. Use Markdown formatting (bold keywords, numbered steps, bullet points).\n` +
+        `4. Keep answers concise, age-appropriate, motivating, and educational.`;
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey.trim()}`;
+      const apiRes = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: `${systemInstruction}\n\nStudent's Question:\n${question}` }]
+            }
+          ],
+          generationConfig: { temperature: 0.6, maxOutputTokens: 800 }
+        })
+      });
+
+      if (apiRes.ok) {
+        const data = await apiRes.json();
+        const geminiText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (geminiText) {
+          responseText = geminiText.trim();
+          provider = 'gemini';
+        }
+      }
+    } catch (e) {
+      console.warn('Local server Gemini error:', e.message);
     }
-  } else if (language === 'hi') {
-    // Pure Hindi AI response
-    if (qLower.includes('गुरुत्वाकर्षण') || qLower.includes('gravity') || qLower.includes('gravitation')) {
-      responseText = `**सक्षम एआई शिक्षक (कक्षा ${studentClass} विज्ञान):**\n\nगुरुत्वाकर्षण ब्रह्मांड में किन्हीं दो पिंडों के बीच लगने वाला आकर्षण बल है।\n\n1. **न्यूटन का सार्वत्रिक नियम:** दो पिंडों के बीच लगने वाला बल उनके द्रव्यमानों के गुणनफल के समानुपाती और उनके बीच की दूरी के वर्ग के व्युत्क्रमानुपाती होता है (F = G·m₁·m₂ / r²)।\n2. **गुरुत्वीय त्वरण (g):** पृथ्वी की सतह पर इसका मान लगभग 9.8 m/s² होता है।\n3. **दैनिक उदाहरण:** पेड़ से गिरा फल हमेशा पृथ्वी के केंद्र की ओर गिरता है।`;
-    } else if (qLower.includes('दाब') || qLower.includes('बल') || qLower.includes('pressure') || qLower.includes('force')) {
-      responseText = `**सक्षम एआई शिक्षक (कक्षा ${studentClass} विज्ञान):**\n\n**बल और दाब की अवधारणा:**\n\n1. **दाब की परिभाषा:** प्रति इकाई क्षेत्रफल पर लगने वाले लंबवत बल को दाब कहते हैं।\n2. **सूत्र:** दाब = बल ÷ क्षेत्रफल (P = F / A)\n3. **मात्रक:** दाब का SI मात्रक **पास्कल (N/m²)** है।\n4. **व्यावहारिक उदाहरण:** चौड़े पट्टे वाले बैग कंधे पर कम दाब डालते हैं, जिससे उन्हें उठाना आसान होता है।`;
+  }
+
+  if (!responseText) {
+    const qLower = question.toLowerCase();
+
+    if (language === 'mr') {
+      if (qLower.includes('गुरुत्वाकर्षण') || qLower.includes('gravity') || qLower.includes('gravitation')) {
+        responseText = `**सक्षम एआय शिक्षक (इयत्ता ${studentClass} वी विज्ञान):**\n\nगुरुत्वाकर्षण म्हणजे विश्वातील कोणत्याही दोन वस्तूंमध्ये असणारे नैसर्गिक आकर्षण बल होय.\n\n१. **न्यूटनचा सिद्धांत:** विश्वातील प्रत्येक वस्तू इतर प्रत्येक वस्तूला एका निश्चित बलाने आकर्षित करते. (F = G·m₁·m₂ / r²).\n२. **पृथ्वीवरील गुरुत्वीय त्वरण (g):** पृथ्वीच्या पृष्ठभागावर 'g' चे मूल्य अंदाजे ९.८ m/s² असते.\n३. **दैनिक उदाहरण:** झाडावरून पडणारे सफरचंद थेट जमिनीच्या दिशेने आकर्षित होते.`;
+      } else if (qLower.includes('दाब') || qLower.includes('बल') || qLower.includes('pressure') || qLower.includes('force')) {
+        responseText = `**सक्षम एआय शिक्षक (इयत्ता ${studentClass} वी विज्ञान):**\n\n**बल आणि दाब संकल्पना:**\n\n१. **दाबाची व्याख्या:** एकाक क्षेत्रफळावर लंब दिशेने प्रयुक्त होणाऱ्या बलाला 'दाब' (Pressure) म्हणतात.\n२. **मुख्य सूत्र:** दाब = बल ÷ क्षेत्रफळ (P = F / A)\n३. **एकक:** दाबाचे एस.आय. एकक **पास्कल (N/m²)** हे आहे.`;
+      } else if (qLower.includes('परिमेय') || qLower.includes('rational') || qLower.includes('संख्या')) {
+        responseText = `**सक्षम एआय शिक्षक (इयत्ता ${studentClass} वी गणित):**\n\n**परिमेय संख्यांची संकल्पना:**\n\n१. ज्या संख्या p/q या रूपात लिहिता येतात, त्यांना परिमेय संख्या म्हणतात (येथे p आणि q पूर्णांक असतात व q ≠ ०).\n२. उदाहरणे: ३/५, -७/२, ०, ४.\n३. संख्यारेषेवर परिमेय संख्या दाखवताना छेदाच्या संख्येइतके समान भाग प्रत्येक एककात केले जातात.`;
+      } else {
+        responseText = `**सक्षम एआय शिक्षक (इयत्ता ${studentClass} वी):**\n\nमहाराष्ट्र राज्य मंडळाच्या इयत्ता ${studentClass} वी च्या अभ्यासक्रमानुसार या घटकाचा स्वाध्यायाच्या माध्यमातून सराव करा.`;
+      }
+    } else if (language === 'hi') {
+      if (qLower.includes('गुरुत्वाकर्षण') || qLower.includes('gravity') || qLower.includes('gravitation')) {
+        responseText = `**सक्षम एआई शिक्षक (कक्षा ${studentClass} विज्ञान):**\n\nगुरुत्वाकर्षण ब्रह्मांड में किन्हीं दो पिंडों के बीच लगने वाला आकर्षण बल है।\n\n1. **न्यूटन का सार्वत्रिक नियम:** F = G·m₁·m₂ / r²।\n2. **गुरुत्वीय त्वरण (g):** लगभग 9.8 m/s²।`;
+      } else if (qLower.includes('परिमेय') || qLower.includes('rational') || qLower.includes('संख्या')) {
+        responseText = `**सक्षम एआई शिक्षक (कक्षा ${studentClass} गणित):**\n\n**परिमेय संख्याएं:** वे संख्याएं जिन्हें p/q रूप में लिखा जा सके (q ≠ 0)। उदाहरण: 3/5, -4/7, 0।`;
+      } else {
+        responseText = `**सक्षम एआई शिक्षक (कक्षा ${studentClass}):**\n\nकृपया अपना प्रश्न थोड़ा स्पष्ट करके पूछें, मैं चरणबद्ध समाधान दूंगा।`;
+      }
     } else {
-      responseText = `**सक्षम एआई शिक्षक (कक्षा ${studentClass}):**\n\nमहाराष्ट्र स्टेट बोर्ड के कक्षा ${studentClass} पाठ्यक्रम के अनुसार:\n\n• इस विषय की मुख्य अवधारणा को समझने के लिए सबसे पहले सूत्र और नियमों का अभ्यास करें।\n• यदि आप किसी विशिष्ट प्रश्न का चरण-दर-चरण समाधान चाहते हैं, तो कृपया प्रश्न साझा करें!`;
-    }
-  } else {
-    // Pure English AI response
-    if (qLower.includes('gravity') || qLower.includes('gravitation')) {
-      responseText = `**Saksham AI Tutor (Class ${studentClass} Science):**\n\n**Concept of Gravitation:**\n\n1. **Definition:** Gravitation is the universal force of mutual attraction acting between all matter.\n2. **Newton's Law:** F = G · (m₁ · m₂) / r², where G = 6.67 × 10⁻¹¹ N·m²/kg².\n3. **Acceleration due to Gravity (g):** On Earth's surface, standard g ≈ 9.8 m/s².\n4. **Practical Example:** An apple falling from a branch accelerates towards Earth's center due to gravity.`;
-    } else if (qLower.includes('pressure') || qLower.includes('force')) {
-      responseText = `**Saksham AI Tutor (Class ${studentClass} Science):**\n\n**Force & Pressure:**\n\n1. **Definition:** Pressure is defined as the perpendicular force acting per unit area.\n2. **Formula:** Pressure = Force ÷ Area (P = F / A)\n3. **SI Unit:** Pascal (Pa) or N/m².\n4. **Example:** Sharp knives cut easily because the tiny surface area creates high pressure with little force.`;
-    } else {
-      responseText = `**Saksham AI Tutor (Class ${studentClass}):**\n\nAccording to the Maharashtra State Board Class ${studentClass} curriculum:\n\n• Core concept is linked to your textbook learning objectives.\n• Follow step-by-step reasoning to master problem solving.\n• Feel free to ask specific numerical problems or textbook doubts!`;
+      if (qLower.includes('gravity') || qLower.includes('gravitation')) {
+        responseText = `**Saksham AI Tutor (Class ${studentClass} Science):**\n\n**Concept of Gravitation:**\n\n1. **Definition:** Gravitation is the universal force of mutual attraction acting between all matter.\n2. **Newton's Law:** F = G · (m₁ · m₂) / r².\n3. **Acceleration due to Gravity (g):** On Earth's surface, standard g ≈ 9.8 m/s².\n4. **Practical Example:** An apple falling from a branch accelerates towards Earth's center due to gravity.`;
+      } else if (qLower.includes('rational') || qLower.includes('number')) {
+        responseText = `**Saksham AI Tutor (Class ${studentClass} Mathematics):**\n\n**Rational Numbers:** Any number expressible in the form p/q (where p, q are integers and q ≠ 0). Examples: 3/5, -7/2, 0, 4.`;
+      } else if (qLower.includes('pressure') || qLower.includes('force')) {
+        responseText = `**Saksham AI Tutor (Class ${studentClass} Science):**\n\n**Force & Pressure:** Pressure = Force ÷ Area (P = F / A), SI Unit: Pascal (Pa).`;
+      } else {
+        responseText = `**Saksham AI Tutor (Class ${studentClass}):**\n\nAccording to the Maharashtra State Board Class ${studentClass} curriculum, feel free to ask specific numerical problems or textbook doubts!`;
+      }
     }
   }
 
   res.json({
     success: true,
+    provider,
     language,
     studentClass,
     response: responseText
@@ -175,36 +220,79 @@ app.post('/api/ai/tutor', (req, res) => {
 // -------------------------------------------------------------
 // IMAGE DOUBT SOLVER / OCR (Visual doubt solver)
 // -------------------------------------------------------------
-app.post('/api/ai/image', upload.single('image'), (req, res) => {
+app.post('/api/ai/image', upload.single('image'), async (req, res) => {
   const { question = '', studentClass = 8, language = 'mr' } = req.body;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.AI_API_KEY;
 
-  // Generate structured educational step-by-step response
-  let breakdown = {};
+  let breakdown = null;
 
-  if (language === 'mr') {
-    breakdown = {
-      stepGiven: "दिलेली माहिती: त्रिकोणाचा पाया (b) = १२ सेमी, उंची (h) = ८ सेमी.",
-      stepFormula: "वापरण्याचे सूत्र: त्रिकोणाचे क्षेत्रफळ = १/२ × पाया × उंची (A = ½ × b × h)",
-      stepCalculation: "पायरीनुसार सोडवणूक:\n१. सूत्रामध्ये किमती भरा: A = ½ × १२ × ८\n२. गणना: A = ६ × ८\n३. A = ४८ चौ. सेमी.",
-      stepAnswer: "अंतिम उत्तर: दिलेल्या त्रिकोणाचे क्षेत्रफळ ४८ चौ. सेमी. आहे.",
-      stepExplanation: "स्पष्टीकरण: त्रिकोणाचे क्षेत्रफळ हे काटकोन चौकोनाच्या निम्मे असते, म्हणून १/२ ने गुणले जाते."
-    };
-  } else if (language === 'hi') {
-    breakdown = {
-      stepGiven: "दिया गया है: त्रिभुज का आधार (b) = 12 सेमी, ऊंचाई (h) = 8 सेमी।",
-      stepFormula: "सूत्र: त्रिभुज का क्षेत्रफल = 1/2 × आधार × ऊंचाई (A = ½ × b × h)",
-      stepCalculation: "चरण-दर-चरण हल:\n1. मान रखें: A = ½ × 12 × 8\n2. गणना: A = 6 × 8\n3. A = 48 वर्ग सेमी।",
-      stepAnswer: "अंतिम उत्तर: त्रिभुज का क्षेत्रफल 48 सेमी² है।",
-      stepExplanation: "सरल व्याख्या: त्रिभुज का क्षेत्रफल समान आधार और ऊंचाई वाले आयत का आधा होता है।"
-    };
-  } else {
-    breakdown = {
-      stepGiven: "Given in the problem: Base of triangle (b) = 12 cm, Height (h) = 8 cm.",
-      stepFormula: "Core Formula: Area of Triangle = ½ × Base × Height (A = ½ × b × h)",
-      stepCalculation: "Step-by-step calculation:\n1. Substitute values: A = ½ × 12 × 8\n2. Multiply: A = 6 × 8\n3. A = 48 sq cm.",
-      stepAnswer: "Final Answer: Area of the triangle is 48 cm².",
-      stepExplanation: "Concept: The area of any triangle is exactly half of the surrounding bounding rectangle."
-    };
+  if (apiKey && apiKey.trim() !== '' && !apiKey.includes('your-') && req.file) {
+    try {
+      const base64Image = req.file.buffer.toString('base64');
+      const langName = language === 'mr' ? 'Marathi (मराठी)' : language === 'hi' ? 'Hindi (हिंदी)' : 'English';
+      const systemInstruction =
+        `You are an expert Math & Science teacher for Maharashtra State Board Class ${studentClass} students.\n` +
+        `Solve the textbook problem shown in the image or described in the question.\n` +
+        `Language: Output strictly in ${langName}.\n` +
+        `You MUST output ONLY a valid JSON object with keys: "stepGiven", "stepFormula", "stepCalculation", "stepAnswer", "stepExplanation".`;
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey.trim()}`;
+      const apiRes = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: systemInstruction },
+                { inlineData: { mimeType: req.file.mimetype || 'image/jpeg', data: base64Image } },
+                { text: question || 'Please solve this problem step by step.' }
+              ]
+            }
+          ],
+          generationConfig: { temperature: 0.2, responseMimeType: 'application/json' }
+        })
+      });
+
+      if (apiRes.ok) {
+        const data = await apiRes.json();
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (rawText) {
+          breakdown = JSON.parse(rawText.replace(/```json/g, '').replace(/```/g, '').trim());
+        }
+      }
+    } catch (e) {
+      console.warn('Gemini vision local error:', e.message);
+    }
+  }
+
+  if (!breakdown) {
+    if (language === 'mr') {
+      breakdown = {
+        stepGiven: "दिलेली माहिती: त्रिकोणाचा पाया (b) = १२ सेमी, उंची (h) = ८ सेमी.",
+        stepFormula: "वापरण्याचे सूत्र: त्रिकोणाचे क्षेत्रफळ = १/२ × पाया × उंची (A = ½ × b × h)",
+        stepCalculation: "पायरीनुसार सोडवणूक:\n१. सूत्रामध्ये किमती भरा: A = ½ × १२ × ८\n२. गणना: A = ६ × ८\n३. A = ४८ चौ. सेमी.",
+        stepAnswer: "अंतिम उत्तर: दिलेल्या त्रिकोणाचे क्षेत्रफळ ४८ चौ. सेमी. आहे.",
+        stepExplanation: "स्पष्टीकरण: त्रिकोणाचे क्षेत्रफळ हे काटकोन चौकोनाच्या निम्मे असते, म्हणून १/२ ने गुणले जाते."
+      };
+    } else if (language === 'hi') {
+      breakdown = {
+        stepGiven: "दिया गया है: त्रिभुज का आधार (b) = 12 सेमी, ऊंचाई (h) = 8 सेमी।",
+        stepFormula: "सूत्र: त्रिभुज का क्षेत्रफल = 1/2 × आधार × ऊंचाई (A = ½ × b × h)",
+        stepCalculation: "चरण-दर-चरण हल:\n1. मान रखें: A = ½ × 12 × 8\n2. गणना: A = 6 × 8\n3. A = 48 वर्ग सेमी।",
+        stepAnswer: "अंतिम उत्तर: त्रिभुज का क्षेत्रफल 48 सेमी² है।",
+        stepExplanation: "सरल व्याख्या: त्रिभुज का क्षेत्रफल समान आधार और ऊंचाई वाले आयत का आधा होता है।"
+      };
+    } else {
+      breakdown = {
+        stepGiven: "Given in the problem: Base of triangle (b) = 12 cm, Height (h) = 8 cm.",
+        stepFormula: "Core Formula: Area of Triangle = ½ × Base × Height (A = ½ × b × h)",
+        stepCalculation: "Step-by-step calculation:\n1. Substitute values: A = ½ × 12 × 8\n2. Multiply: A = 6 × 8\n3. A = 48 sq cm.",
+        stepAnswer: "Final Answer: Area of the triangle is 48 cm².",
+        stepExplanation: "Concept: The area of any triangle is exactly half of the surrounding bounding rectangle."
+      };
+    }
   }
 
   res.json({
