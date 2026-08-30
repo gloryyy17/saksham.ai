@@ -3,6 +3,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNetwork } from '../../contexts/NetworkContext';
 import { Mic, MicOff, Volume2, VolumeX, Loader2, Sparkles } from 'lucide-react';
+import { generateAITutorResponse } from '../../utils/aiTutorEngine';
 
 export default function VoiceAssistant({ onAnswerGenerated = () => {} }) {
   const { language, t } = useLanguage();
@@ -100,33 +101,46 @@ export default function VoiceAssistant({ onAnswerGenerated = () => {} }) {
     setIsProcessing(true);
     setErrorMessage('');
 
+    let textAnswer = '';
+
     try {
       if (isOnline) {
-        const res = await fetch('/api/ai/tutor', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            question: queryText,
-            studentClass: profile?.class_id || 8,
-            language: language,
-            subject: 'general'
-          })
-        });
+        try {
+          const res = await fetch('/api/ai/tutor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              question: queryText,
+              studentClass: profile?.class_id || 8,
+              language: language,
+              subject: 'general'
+            })
+          });
 
-        if (res.ok) {
-          const data = await res.json();
-          setResponse(data.response);
-          onAnswerGenerated(data.response);
-          speakResponse(data.response);
-        } else {
-          throw new Error('API failed');
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.response) {
+              textAnswer = data.response;
+            }
+          }
+        } catch (fetchErr) {
+          console.warn('Voice online fetch failed, using local engine:', fetchErr);
         }
-      } else {
-        setErrorMessage(t('aiTutor.offlineNotice'));
       }
+
+      if (!textAnswer) {
+        textAnswer = generateAITutorResponse(queryText, profile?.class_id || 8, language);
+      }
+
+      setResponse(textAnswer);
+      onAnswerGenerated(textAnswer);
+      speakResponse(textAnswer);
     } catch (err) {
       console.warn('AI query error:', err);
-      setErrorMessage(t('errors.generic'));
+      const safeAnswer = generateAITutorResponse(queryText, profile?.class_id || 8, language);
+      setResponse(safeAnswer);
+      onAnswerGenerated(safeAnswer);
+      speakResponse(safeAnswer);
     } finally {
       setIsProcessing(false);
     }

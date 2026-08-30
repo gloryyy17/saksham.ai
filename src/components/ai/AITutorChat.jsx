@@ -5,6 +5,8 @@ import { useNetwork } from '../../contexts/NetworkContext';
 import { useCurriculum } from '../../contexts/CurriculumContext';
 import { Send, Bot, User, Sparkles, Loader2, BookOpen } from 'lucide-react';
 
+import { generateAITutorResponse } from '../../utils/aiTutorEngine';
+
 export default function AITutorChat() {
   const { language, t } = useLanguage();
   const { profile } = useAuth();
@@ -47,38 +49,48 @@ export default function AITutorChat() {
     setInputQuestion('');
     setIsLoading(true);
 
+    let answerReceived = false;
+
     try {
       if (isOnline) {
-        const res = await fetch('/api/ai/tutor', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            question: textToSend,
-            studentClass: profile?.class_id || 8,
-            language: language,
-            subject: 'general'
-          })
-        });
+        try {
+          const res = await fetch('/api/ai/tutor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              question: textToSend,
+              studentClass: profile?.class_id || 8,
+              language: language,
+              subject: 'general'
+            })
+          });
 
-        if (res.ok) {
-          const data = await res.json();
-          setMessages([...newMsgList, { sender: 'ai', text: data.response }]);
-        } else {
-          throw new Error('API failed');
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.response) {
+              setMessages([...newMsgList, { sender: 'ai', text: data.response }]);
+              answerReceived = true;
+            }
+          }
+        } catch (fetchErr) {
+          console.warn('Online API fetch failed, falling back to local reasoning engine:', fetchErr);
         }
-      } else {
-        // Offline Local Search Fallback in Dexie downloaded chapters
+      }
+
+      // If not online or if API call didn't return a response, run local intelligence
+      if (!answerReceived) {
+        // 1. Check Dexie downloaded chapters first
         let localFoundExplanation = '';
         const lowerQ = textToSend.toLowerCase();
-        
+
         for (const chId in downloadedChaptersMap) {
-          const ch = downloadedChaptersMap[chId].payload || downloadedChaptersMap[chId];
-          const lessons = ch.lessons || [];
+          const ch = downloadedChaptersMap[chId]?.payload || downloadedChaptersMap[chId];
+          const lessons = ch?.lessons || [];
           for (const l of lessons) {
-            const expl = l.explanation || [];
+            const expl = l?.explanation || [];
             for (const item of expl) {
               const textContent = (language === 'mr' ? item.text_mr : language === 'hi' ? item.text_hi : item.text) || item.text || '';
-              if (textContent.toLowerCase().includes(lowerQ) || l.title.toLowerCase().includes(lowerQ)) {
+              if (textContent && (textContent.toLowerCase().includes(lowerQ) || l.title?.toLowerCase().includes(lowerQ))) {
                 localFoundExplanation = textContent;
                 break;
               }
@@ -89,15 +101,18 @@ export default function AITutorChat() {
         }
 
         if (localFoundExplanation) {
-          const prefix = language === 'mr' ? '📚 [ऑफलाइन स्थानिक धड्यातून]: ' : language === 'hi' ? '📚 [ऑफ़लाइन पाठ से]: ' : '📚 [From Offline Downloaded Lesson]: ';
+          const prefix = language === 'mr' ? '📚 [स्थानिक धड्यातून]:\n\n' : language === 'hi' ? '📚 [स्थानिक पाठ से]:\n\n' : '📚 [From Downloaded Lesson]:\n\n';
           setMessages([...newMsgList, { sender: 'ai', text: prefix + localFoundExplanation }]);
         } else {
-          setMessages([...newMsgList, { sender: 'ai', text: t('aiTutor.offlineNotice') }]);
+          // 2. Generate structured curriculum AI response
+          const smartResponse = generateAITutorResponse(textToSend, profile?.class_id || 8, language);
+          setMessages([...newMsgList, { sender: 'ai', text: smartResponse }]);
         }
       }
     } catch (err) {
       console.warn('AI chat error:', err);
-      setMessages([...newMsgList, { sender: 'ai', text: t('errors.generic') }]);
+      const fallbackResponse = generateAITutorResponse(textToSend, profile?.class_id || 8, language);
+      setMessages([...newMsgList, { sender: 'ai', text: fallbackResponse }]);
     } finally {
       setIsLoading(false);
     }
