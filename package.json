@@ -6,7 +6,7 @@
   "description": "SAKSHAM.AI — Offline-First Maharashtra State Board Learning Platform (Classes 6-10)",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "chmod +x node_modules/.bin/* && vite build",
     "preview": "vite preview",
     "server": "node server/index.js",
     "start": "node server/index.js",
