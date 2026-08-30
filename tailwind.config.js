@@ -39,10 +39,12 @@ export default {
           100: '#F5F0E6',
         },
         surface: {
-          light: '#F8FAFC',
-          warm: '#FAFAF9',
+          light: '#F8FAF9',
+          warm: '#F4F7F4',
+          cream: '#FAF8F5',
+          page: '#F5F1E6',   // NEW — warm beige, used as the app's base background
           card: '#FFFFFF',
-          border: '#E2E8F0',
+          border: '#E5E7EB',
         },
         offline: '#EA580C',
       },
